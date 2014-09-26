@@ -1,0 +1,25 @@
+INSTALLATION steps for Windows
+-> install anaconda (python 2.7, 32 bit), link:
+https://store.continuum.io/cshop/anaconda/
+
+-> install wxPython (2.8 is preferred)
+http://sourceforge.net/projects/wxpython/files/wxPython/2.8.12.1/wxPython2.8-win32-unicode-2.8.12.1-py27.exe/download
+
+-> install pyAudio
+http://people.csail.mit.edu/hubert/pyaudio/packages/pyaudio-0.2.8.py27.exe
+
+-> make sure you have pip 1.4.1 (unicode problems in later versions) by using conda:
+   conda install pip=1.4.1
+-> install pyglet with pip:
+   pip install pyglet
+
+
+MAY NOT BE NECESSARY
+--------------------
+
+-> install pyo?
+   - it insalled to C:\Python27\ which I no longer use
+   - I just copied the files to Anaconda
+
+-> install AVbin:
+http://avbin.github.io/AVbin/Download.html
