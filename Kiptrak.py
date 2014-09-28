@@ -7,11 +7,11 @@
 #     alternatywa - mieszanie w grupach [2, 3, 4] np:
 #     [3, 2, 4, 4, 3, 2, 3, 4, 2, 2, 3, 4, 3, 4, 2]
 # TASKS:
-# [ ] jakie losowanie do triali treningowych? (zależne)
-# [ ] jakiś feedback w treningu? ("poprawna odpowiedź to:" bez dźwięku)
 # [ ] save RT and mic init time
 # [ ] instrukcje? - prześle Natalia
 # [ ] ? 'space' - do kończenia nagrywania dźwięku?
+# [X] jakie losowanie do triali treningowych? (zależne)
+# [X] jakiś feedback w treningu? ("poprawna odpowiedź to:" bez dźwięku)
 # 
 
 # SETTINGS
