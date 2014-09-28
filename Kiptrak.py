@@ -682,11 +682,6 @@ for trial in range(len(trialInfo)):
 		stimText = list(trialInfo.iloc[trial][colNamesLast[0:N]]) + [u'poprawna odpowiedź to:']
 		n_frames = exp['frames']['feedback']
 
-		# debug
-		print 'Length of stimList', len(stimList)
-		print 'Length of stimText', len(stimText)
-		print 'stimText:', stimText
-
 		draw_frames(stimList, stimText, n_frames, exp['window'])
 
 	# save the datafame every trial:
