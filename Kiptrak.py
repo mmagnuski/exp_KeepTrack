@@ -75,7 +75,7 @@ print 'Importing wave...'
 import wave
 print 'Importing PsychoPy...'
 from psychopy import core, visual, gui, event
-print 'ignore the error above - do not worry'
+print 'ignore the error above - do not worry :)'
 print '\nall imports done.\n\n'
 
 
@@ -131,7 +131,7 @@ def trim(snd_data):
     snd_data.reverse()
     return snd_data
 
-def record():
+def record(clock, time_list):
     """
     Record a word or words from the microphone and 
     return the data as an array of signed shorts.
@@ -151,6 +151,9 @@ def record():
 
     r = array('h')
 
+    # get initialization time
+    time_list.append(clock.getTime())
+
     while 1:
         # little endian, signed short
         snd_data = array('h', stream.read(CHUNK_SIZE))
@@ -163,6 +166,7 @@ def record():
         if silent and snd_started:
             num_silent += 1
         elif not silent and not snd_started:
+        	time_list.append(clock.getTime())
             snd_started = True
 
         if snd_started and num_silent > SILENT_TRESHOLD:
@@ -177,9 +181,10 @@ def record():
     r = trim(r)
     return sample_width, r
 
-def record_to_file(path):
+def record_to_file(path, clock):
     "Records from the microphone and outputs the resulting data to 'path'"
-    sample_width, data = record()
+    time_list = []
+    sample_width, data = record(clock, time_list)
     data = pack('<' + ('h'*len(data)), *data)
 
     wf = wave.open(path, 'wb')
@@ -188,6 +193,7 @@ def record_to_file(path):
     wf.setframerate(RATE)
     wf.writeframes(data)
     wf.close()
+    return time_list
 
 # Find N smallest (recursive)
 def nSmallest(vec, N, use = None):
@@ -328,8 +334,8 @@ def generateTrials(subj, exp):
 	colNamesTarg = ['wordIsTarget' + fillz(x, 2) for x in range(1,16)]
 
 	# join column names
-	colNames = ['ifExp', 'N'] + colNamesCat + colNamesLast + \
-		colNamesWord + colNamesTarg + ['soundFile']
+	colNames = ['ifExp', 'soundFile', 'micInitTime', 'RT', 'N'] + 
+		colNamesCat + colNamesLast + colNamesWord + colNamesTarg + []
 
 	# create DataFrame for results
 	numTrain = len(exp['trainingTrials'])
@@ -480,6 +486,8 @@ def GetUserName():
 # SETUP
 # -----
 pth = os.getcwd()
+clock = core.Clock()
+t = clock.getTime()
 
 # get subject info
 # ----------------
@@ -651,16 +659,21 @@ for trial in range(len(trialInfo)):
 
 		draw_frames(stimList, stimText, n_frames, exp['window'])
 
-	# record sound!
+	# prepare sound recording
 	stim['centerPolecenie'].draw()
 	exp['window'].flip()
 	soundfile = os.path.join(pth, 'output', subj['file'], 
 		trialInfo.iloc[trial]['soundFile'])
-	record_to_file(soundfile)
 
-	keys = event.getKeys()
-	if 'q' in keys:
-		core.quit()
+	# reset clock
+	clock.reset()
+	# record sound
+	tm = record_to_file(soundfile, clock)
+
+	# add timing info to trialInfo
+	trialInfo.iloc[trial]['micInitTime'] = tm[0]
+	trialInfo.iloc[trial]['RT'] = tm[1]
+
 
 	# display feedback if training trial:
 	if not trialInfo.iloc[trial]['ifExp']:
@@ -671,5 +684,11 @@ for trial in range(len(trialInfo)):
 
 		draw_frames(stimList, stimText, n_frames, exp['window'])
 
+	keys = event.getKeys()
+	if 'q' in keys:
+		core.quit()
+
+	# save the datafame every trial:
+	trialInfo.to_excel(os.path.join(pth, 'output', subj['file'] + '.xls'))
 
 core.quit()
