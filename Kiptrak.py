@@ -7,9 +7,9 @@
 #     alternatywa - mieszanie w grupach [2, 3, 4] np:
 #     [3, 2, 4, 4, 3, 2, 3, 4, 2, 2, 3, 4, 3, 4, 2]
 # TASKS:
-# [ ] save RT and mic init time
 # [ ] instrukcje? - prześle Natalia
 # [ ] ? 'space' - do kończenia nagrywania dźwięku?
+# [X] save RT and mic init time
 # [X] jakie losowanie do triali treningowych? (zależne)
 # [X] jakiś feedback w treningu? ("poprawna odpowiedź to:" bez dźwięku)
 # 
@@ -40,7 +40,7 @@ exp['activeButton']     = 'space'
 
 # SOUND
 # -----
-THRESHOLD       = 500
+THRESHOLD       = 500   # not sure if the threshold is adequate...
 CHUNK_SIZE      = 1024
 RATE            = 44100
 SILENT_TRESHOLD = 87
@@ -166,7 +166,7 @@ def record(clock, time_list):
         if silent and snd_started:
             num_silent += 1
         elif not silent and not snd_started:
-        	time_list.append(clock.getTime())
+            time_list.append(clock.getTime())
             snd_started = True
 
         if snd_started and num_silent > SILENT_TRESHOLD:
@@ -334,8 +334,8 @@ def generateTrials(subj, exp):
 	colNamesTarg = ['wordIsTarget' + fillz(x, 2) for x in range(1,16)]
 
 	# join column names
-	colNames = ['ifExp', 'soundFile', 'micInitTime', 'RT', 'N'] + 
-		colNamesCat + colNamesLast + colNamesWord + colNamesTarg + []
+	colNames = ['ifExp', 'soundFile', 'micInitTime', 'RT', 'N'] + \
+		colNamesCat + colNamesLast + colNamesWord + colNamesTarg
 
 	# create DataFrame for results
 	numTrain = len(exp['trainingTrials'])
@@ -432,8 +432,8 @@ def generateTrials(subj, exp):
 	    
 	    # N chosen cats & filename
 	    df.iloc[t]['N'] = N
-	    df.iloc[t]['ifExp'] = True if t > numTrain else False
-	    df.iloc[t]['soundFile'] = subj['symb'] + subj['indTxt'] + '_' + 
+	    df.iloc[t]['ifExp'] = True if t + 1 > numTrain else False
+	    df.iloc[t]['soundFile'] = subj['symb'] + subj['indTxt'] + '_' + \
 	    						  fillz(t + 1 - numTrain, 2) + '.wav'
 	    
 	    # categories
@@ -679,16 +679,21 @@ for trial in range(len(trialInfo)):
 	if not trialInfo.iloc[trial]['ifExp']:
 		# show feedback
 		stimList = stim['categoryText'][N] + [stim['centerText']]
-		stimText = [colNamesLast[0:N]] + ['poprawna odpowiedź to:']
+		stimText = list(trialInfo.iloc[trial][colNamesLast[0:N]]) + [u'poprawna odpowiedź to:']
 		n_frames = exp['frames']['feedback']
 
+		# debug
+		print 'Length of stimList', len(stimList)
+		print 'Length of stimText', len(stimText)
+		print 'stimText:', stimText
+
 		draw_frames(stimList, stimText, n_frames, exp['window'])
+
+	# save the datafame every trial:
+	trialInfo.to_excel(os.path.join(pth, 'output', subj['file'] + '.xls'))
 
 	keys = event.getKeys()
 	if 'q' in keys:
 		core.quit()
-
-	# save the datafame every trial:
-	trialInfo.to_excel(os.path.join(pth, 'output', subj['file'] + '.xls'))
 
 core.quit()
