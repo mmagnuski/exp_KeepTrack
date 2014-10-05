@@ -338,7 +338,7 @@ def generateTrials(subj, exp):
 		colNamesCat + colNamesLast + colNamesWord + colNamesTarg
 
 	# create DataFrame for results
-	numTrain = len(exp['trainingTrials'])
+	numTrain = 3
 	df = pd.DataFrame(index=np.arange(0, numTrain + exp['numberOfTrials']), columns = colNames )
 
 
@@ -362,7 +362,9 @@ def generateTrials(subj, exp):
 	# SET N-s
 	# -------
 	Ns = np.fromfile('N.txt', sep = '\t', dtype = int)
-    Ns = np.concatenate(([1,2,3], Ns))
+	Ns = np.concatenate(([2,3,4], Ns))
+	print len(Ns)
+	print len(df)
 
 
 	for t in range(len(df)):
@@ -533,9 +535,6 @@ exp['wordsCat'] = np.zeros(exp['wordsNum'], dtype = int)
 for i in range(exp['catNum']):
     exp['wordsCat'][ data[data['kategorie'] == exp['categ'][i]].index ] = i
 
-
-# trials etc
-exp['numberOfTrials'] = 15
 
 
 # generate trials:
