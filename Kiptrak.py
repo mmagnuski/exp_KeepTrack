@@ -20,7 +20,7 @@
 # timings (in ms)
 times = {}
 times['categoriesFirst'] = 1500
-times['fixation']        = 1000
+times['fixation']        = 500
 times['word']            = 1000
 times['maxRespTime']     = 1000
 times['feedback']        = 3500
@@ -33,7 +33,7 @@ exp['times'] = times
 # number of trials etc.:
 # CHANGE
 exp['trainingTrials']   = [2, 3, 4]
-exp['numberOfTrials']   = 15
+exp['numberOfTrials']   = 12
 exp['categoriesHPos']   = -0.3
 exp['activeButton']     = 'space'
 
@@ -361,13 +361,9 @@ def generateTrials(subj, exp):
 
 	# SET N-s
 	# -------
-	Ns = [2, 3, 4] * np.ceil(exp['numberOfTrials'] / 3.)
-	np.random.shuffle(Ns)
-	Ns = Ns[:exp['numberOfTrials']]
-	Ns = np.concatenate([exp['trainingTrials'], Ns])
+	Ns = np.fromfile('N.txt', sep = '\t', dtype = int)
+    Ns = np.concatenate(([1,2,3], Ns))
 
-	# CHANGE - add training! (assumption - goes up from 2 to 4 ?)
-	# CHANGE   range(15) to adequate range
 
 	for t in range(len(df)):
 	    
