@@ -363,8 +363,6 @@ def generateTrials(subj, exp):
 	# -------
 	Ns = np.fromfile('N.txt', sep = '\t', dtype = int)
 	Ns = np.concatenate(([2,3,4], Ns))
-	print len(Ns)
-	print len(df)
 
 
 	for t in range(len(df)):
