@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# QUESTIONs:
-# [ ] możliwe jest uzyskanie takiej sekwencji ilości targetów:
-#     [4, 4, 4, 2, 3, 3, 2, 4, 3, 3, 2, 2, 4, 2, 3]
-#     alternatywa - mieszanie w grupach [2, 3, 4] np:
-#     [3, 2, 4, 4, 3, 2, 3, 4, 2, 2, 3, 4, 3, 4, 2]
 # TASKS:
-# [ ] instrukcje? - prześle Natalia
-# [ ] ? 'space' - do kończenia nagrywania dźwięku?
+# [ ] kolorowe znaki zap
+# [ ] brak fiksacji
+# [ ] dobre czasy
+# [X] instrukcje? - prześle Natalia
 # [X] save RT and mic init time
 # [X] jakie losowanie do triali treningowych? (zależne)
 # [X] jakiś feedback w treningu? ("poprawna odpowiedź to:" bez dźwięku)
@@ -36,6 +33,21 @@ exp['trainingTrials']   = [2, 3, 4]
 exp['numberOfTrials']   = 12
 exp['categoriesHPos']   = -0.3
 exp['activeButton']     = 'space'
+
+# podczas prezentowania instrukcji:
+# odpowiedzi 'tak'/'nie', 'dalej'/'wstecz'
+odp = {}
+odp['tak'] = 't'
+odp['nie'] = 'n'
+odp['dalej'] = 'j'
+odp['wstecz'] = 'f'
+
+# jak dzielic wyświetlanie tekstu na fragmenty:
+partsDict = {}
+partsDict['words'] = 26
+partsDict['splitLines'] = True
+partsDict['sentences'] = 1
+
 
 
 # SOUND
@@ -67,6 +79,9 @@ print 'Importing array and struct...'
 from sys import byteorder
 from array import array
 from struct import pack
+
+print 'Importing codecs...'
+import codecs
 
 print 'Importing pyAudio...'
 print '(if this fails - try running the procedure again)'
@@ -471,6 +486,201 @@ def GetUserName():
    
     return user
 
+def split_text(fulltext, partsDict):
+	'''
+	Splits text into fragments to be presented at one on the screen
+	according to the settings defined in partsDict
+	'''
+
+	# split into lines
+	if partsDict['splitLines']:
+		txt = fulltext.split('\r')
+	else:
+		txt = fulltext
+
+	# split into sentences or words
+	fin_text = []
+
+	if not partsDict['sentences'] == None:
+		d = '. '
+		N = partsDict['sentences']
+	else:
+		d = ' '
+		N = partsDict['words']
+
+	# split into relevant parts
+	for el in txt:
+		splt = el.split(d)
+
+		# remove empty last items
+		if len(splt[-1]) == 0:
+			splt.pop()
+            
+
+		ln = len(splt)
+		inds = range(0, ln, N) + [ln]
+
+		for i in range(len(inds) - 1):            
+			if i < len(inds) - 2:
+				splt[inds[i+1] - 1] += '. '
+
+			fin_text.append(d.join(splt[inds[i]:inds[i+1]]))
+
+
+	# if sentences + words:
+	if d == '. ' and not partsDict['words'] == None:
+		# go through sentences again counting number of words
+		next_text = [fin_text[0]]
+		word_count = [len(x.split(' ')) - 1 for x in fin_text]
+		
+		last_adr = 0
+		sumWord = word_count[0]
+
+		for c, el in zip(word_count[1:], fin_text[1:]):
+			
+			# check if current can be added to previous:
+			if sumWord + c <= partsDict['words']:
+				sumWord += c
+				next_text[last_adr] = ' '.join([next_text[last_adr], el])
+			else:
+				sumWord = c
+				last_adr += 1
+				next_text.append(el)
+
+		return next_text
+	else:
+		return fin_text
+
+def prepare_navig(pth, stimDict, odp, mode = 'move'):
+
+	# read in the left and right text
+	if mode == 'move':
+		fls = ['left.txt', 'right.txt']
+		vls = ['wstecz', 'dalej']
+	elif mode == 'respond':
+		fls = ['yes.txt', 'no.txt']
+		vls = ['tak', 'nie']
+
+	tx = []
+	for fl in fls:
+		f = codecs.open( os.path.join(pth, fl) , encoding='mbcs' )
+		tx.append( f.read() )
+
+	# set as text values with relevant keys
+	stimDict['navig']['left'].setText(tx[0] + ' "' + odp[vls[0]] + '"')
+	stimDict['navig']['right'].setText(tx[1] + ' "' + odp[vls[1]] + '"')
+
+
+def show_txt_parts(fl, stimDict, partsDict, odp, timerDict = None):
+	'''
+	Displays text on the screen in portions.
+
+	stimDict    - dictionary of experiment display objects:
+		'window'      the window that stimuli are drawn in
+		'text'        text object that gets updated with text
+		''
+
+	timerDict   - dictionary with timer-relevant information:
+		'timer'       text object that displays the timer
+		'maxTime'     max browsing time in seconds
+		'currTime'    current time, should start at zero
+
+	'''
+
+	# read in the text file
+	f = codecs.open( fl, encoding='mbcs' )
+	text = f.read()
+
+	# segment into parts accordingly:
+	txt = split_text(text, partsDict)
+
+	# create variable tracking part of txt displayed:
+	page = 0
+	pageNew = True
+	highlightTimer = False
+	pageNum = len(txt)
+
+	# whether to still linger in the loop
+	notFin = True
+
+	# initialize timer
+	if not timerDict == None:
+		timerDict['startTime'] = core.getTime()
+		timerDict['timeLeft'] = timerDict['maxTime']
+
+	while notFin:
+
+		# remember the time of page start
+		if pageNew:
+			startPage = core.getTime()
+			stimDict['text'].setText(txt[page])
+			stimDict['pageCounter'].setText( str(page + 1) + ' / ' + str(pageNum) )
+			pageNew = False
+
+		# display current text part
+		stimDict['text'].draw()
+
+		# display page counter:
+		stimDict['pageCounter'].draw()
+
+		# if navigation text is in StimDict - draw navigation text
+		if 'navig' in stimDict:
+			if page > 0:
+				stimDict['navig']['left'].draw()
+
+			stimDict['navig']['right'].draw()			
+
+		# update timer
+		if not timerDict == None:
+			# display timer if present
+			timerDict['elapsedTime'] = core.getTime() - timerDict['startTime']
+			timerDict['timeLeft'] = timerDict['maxTime'] - timerDict['elapsedTime']
+
+			if timerDict['timeLeft'] < 0:
+				notFin = False
+				break
+			elif timerDict['timeLeft'] < 30 and not highlightTimer:
+				highlightTimer = True
+				timerDict['timer'].color = (1.0, -1.0, -1.0)
+
+			# pretty format:
+			minutes = int(np.floor(timerDict['timeLeft'] / 60.0))
+			seconds = int(np.floor(timerDict['timeLeft'] - minutes * 60.))
+
+			# set text
+			timerDict['timer'].setText(fillz(minutes, 2) + ':' + fillz(seconds, 2))
+			timerDict['timer'].draw()
+
+
+		# update window
+		stimDict['window'].flip()
+
+		# check for response
+		ks = event.getKeys(timeStamped = True)
+
+		# evaluate resposne (+Log)
+		if not ks == None and len(ks) > 0:
+			
+			# check only key at position 0
+			key = ks[0]
+			prevPage = page
+
+			# DEBUG
+			if key[0] == 'q':
+				goneWrong = True
+
+			# check if forward/back
+			if key[0] == odp['dalej']:
+				pageNew = True
+				if page < pageNum - 1:
+					page += 1
+				else:
+					notFin = False
+			elif key[0] == odp['wstecz']:
+
+				if page > 0:
+					pageNew = True
+					page -= 1
 # --------------------------
 
 
@@ -487,9 +697,10 @@ t = clock.getTime()
 
 # get subject info
 # ----------------
-subj = {}
-subj['symb']   = 'KT'
-subj['ind'] = GetUserName()
+subj         = {}
+subj['symb'] = 'KT'
+subj['ind']  = GetUserName()
+
 if subj['ind'] == None:
 	# get free name
 	subj['ind'], subj['subfl'] = free_filename(
@@ -597,9 +808,45 @@ colNamesLast = ['lastWordCat' + fillz(x, 2) for x in range(1,5)]
 colNamesWord = ['word' + fillz(x, 2) for x in range(1,16)]
 colNamesTarg = ['wordIsTarget' + fillz(x, 2) for x in range(1,16)]
 
-# colNames = ['ifExp', 'N'] + colNamesCat + colNamesLast + \
-# 	colNamesWord + colNamesTarg + ['soundFile']
 
+# INSTRUCTIONS
+# prepare stimuli, stim dictionary etc.
+stim['text'] = visual.TextStim(exp['window'], text='', font='Courier New', pos=(0.0, 0.0), 
+	units = 'norm', height = 0.1)
+stim['pageCounter'] = visual.TextStim(exp['window'], text='', font='Courier New', pos=(0.0, -0.75), 
+	units = 'norm', height = 0.1)
+navig = {}
+navig['left'] = visual.TextStim(exp['window'], text='', font='Courier New', pos=(-0.7, -0.8), 
+	units = 'norm', height = 0.07)
+navig['right'] = visual.TextStim(exp['window'], text='', font='Courier New', pos=(0.7, -0.8), 
+	units = 'norm', height = 0.07)
+stim['navig'] = navig
+stim['window'] = exp['window']
+
+
+# CHECK the code below:
+instrpth = os.path.join(pth, 'instruct')
+instr_fl = os.path.join(instrpth, 'instrukcje.txt')
+
+# show text in parts
+prepare_navig(instrpth, stim, odp, mode = 'move')
+show_txt_parts(instr_fl, stim, partsDict, odp)
+
+# clear the screen and wait a little bit
+exp['window'].flip()
+core.wait(0.5)
+
+
+
+# CATEGORIES presentation
+# -----------------------
+partsDict['words'] = 4
+show_txt_parts(os.path.join(instrpth, 'kategorie.txt'), stim, partsDict, odp)
+
+
+
+# TRAINING + EXPERIMENTAL part
+# ----------------------------
 
 def draw_frames(stimList, stimText, n_frames, win):
 	# set text:
@@ -651,6 +898,11 @@ for trial in range(len(trialInfo)):
 		n_frames = exp['frames']['word']
 
 		draw_frames(stimList, stimText, n_frames, exp['window'])
+
+		keys = event.getKeys()
+		if 'q' in keys:
+			core.quit()
+
 
 	# prepare sound recording
 	stim['centerPolecenie'].draw()
